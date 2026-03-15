@@ -1,0 +1,314 @@
+{
+  "selection_rates": {
+    "pick_from_private_region_my_later": {
+      "chosen": 2,
+      "total": 26,
+      "rate": 0.076923
+    },
+    "wait": {
+      "chosen": 27,
+      "total": 100,
+      "rate": 0.27
+    },
+    "place_in_private_region_my_later": {
+      "chosen": 2,
+      "total": 3,
+      "rate": 0.666667
+    },
+    "place_on_cutting_board_my_later_to_cut": {
+      "chosen": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "pick_from_cutting_board_my_later_to_cut": {
+      "chosen": 0,
+      "total": 1,
+      "rate": 0.0
+    },
+    "cut": {
+      "chosen": 3,
+      "total": 4,
+      "rate": 0.75
+    },
+    "pick_from_cutting_board_my_later_ready": {
+      "chosen": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "place_on_cutting_board_my_later_ready": {
+      "chosen": 0,
+      "total": 2,
+      "rate": 0.0
+    },
+    "pick_from_cutting_board_my_next_ready": {
+      "chosen": 9,
+      "total": 9,
+      "rate": 1.0
+    },
+    "place_on_cutting_board_my_next_ready": {
+      "chosen": 0,
+      "total": 15,
+      "rate": 0.0
+    },
+    "place_on_plate": {
+      "chosen": 16,
+      "total": 16,
+      "rate": 1.0
+    },
+    "pick_from_private_region_my_next": {
+      "chosen": 9,
+      "total": 9,
+      "rate": 1.0
+    },
+    "place_in_private_region_my_next": {
+      "chosen": 0,
+      "total": 15,
+      "rate": 0.0
+    },
+    "pick_from_private_region_opp_next": {
+      "chosen": 8,
+      "total": 23,
+      "rate": 0.347826
+    },
+    "pick_from_cutting_board_opp_later_to_cut": {
+      "chosen": 0,
+      "total": 1,
+      "rate": 0.0
+    },
+    "place_on_cutting_board_opp_next_ready": {
+      "chosen": 6,
+      "total": 10,
+      "rate": 0.6
+    },
+    "place_in_private_region_opp_next": {
+      "chosen": 6,
+      "total": 12,
+      "rate": 0.5
+    },
+    "pick_from_cutting_board_opp_next_ready": {
+      "chosen": 2,
+      "total": 11,
+      "rate": 0.181818
+    },
+    "pick_from_private_region_opp_later": {
+      "chosen": 5,
+      "total": 18,
+      "rate": 0.277778
+    },
+    "place_in_private_region_opp_later": {
+      "chosen": 0,
+      "total": 3,
+      "rate": 0.0
+    },
+    "place_on_cutting_board_opp_later_ready": {
+      "chosen": 2,
+      "total": 2,
+      "rate": 1.0
+    },
+    "pick_from_cutting_board_my_next_to_cut": {
+      "chosen": 0,
+      "total": 1,
+      "rate": 0.0
+    },
+    "place_on_cutting_board_opp_later_to_cut": {
+      "chosen": 1,
+      "total": 1,
+      "rate": 1.0
+    },
+    "pick_from_cutting_board_opp_next_to_cut": {
+      "chosen": 0,
+      "total": 1,
+      "rate": 0.0
+    }
+  },
+  "bigrams": {
+    "success": {
+      "none": [
+        [
+          "pick_from_private_region_my_next",
+          2
+        ],
+        [
+          "pick_from_private_region_my_later",
+          1
+        ],
+        [
+          "wait",
+          1
+        ]
+      ],
+      "pick_from_private_region_my_later": [
+        [
+          "place_on_cutting_board_my_later_to_cut",
+          1
+        ],
+        [
+          "place_in_private_region_my_later",
+          1
+        ]
+      ],
+      "place_on_cutting_board_my_later_to_cut": [
+        [
+          "cut",
+          1
+        ]
+      ],
+      "cut": [
+        [
+          "pick_from_cutting_board_my_later_ready",
+          1
+        ],
+        [
+          "pick_from_cutting_board_my_next_ready",
+          1
+        ]
+      ],
+      "pick_from_cutting_board_my_later_ready": [
+        [
+          "place_in_private_region_my_later",
+          1
+        ]
+      ],
+      "place_in_private_region_my_later": [
+        [
+          "pick_from_private_region_my_later",
+          1
+        ],
+        [
+          "wait",
+          1
+        ]
+      ],
+      "wait": [
+        [
+          "wait",
+          17
+        ],
+        [
+          "pick_from_cutting_board_my_next_ready",
+          3
+        ],
+        [
+          "pick_from_private_region_opp_later",
+          3
+        ],
+        [
+          "pick_from_cutting_board_opp_next_ready",
+          1
+        ],
+        [
+          "pick_from_private_region_opp_next",
+          1
+        ]
+      ],
+      "pick_from_cutting_board_my_next_ready": [
+        [
+          "place_on_plate",
+          7
+        ]
+      ],
+      "place_on_plate": [
+        [
+          "pick_from_private_region_my_next",
+          7
+        ],
+        [
+          "pick_from_private_region_opp_next",
+          4
+        ],
+        [
+          "pick_from_cutting_board_my_next_ready",
+          2
+        ],
+        [
+          "cut",
+          1
+        ]
+      ],
+      "pick_from_private_region_my_next": [
+        [
+          "place_on_plate",
+          9
+        ]
+      ],
+      "pick_from_private_region_opp_next": [
+        [
+          "place_on_cutting_board_opp_next_ready",
+          6
+        ],
+        [
+          "place_in_private_region_opp_next",
+          4
+        ]
+      ],
+      "place_on_cutting_board_opp_next_ready": [
+        [
+          "wait",
+          5
+        ],
+        [
+          "pick_from_private_region_opp_later",
+          2
+        ],
+        [
+          "pick_from_cutting_board_opp_next_ready",
+          1
+        ]
+      ],
+      "pick_from_private_region_opp_later": [
+        [
+          "place_on_cutting_board_opp_later_ready",
+          2
+        ],
+        [
+          "place_on_cutting_board_opp_later_to_cut",
+          1
+        ]
+      ],
+      "pick_from_cutting_board_opp_next_ready": [
+        [
+          "place_in_private_region_opp_next",
+          2
+        ]
+      ],
+      "place_in_private_region_opp_next": [
+        [
+          "pick_from_cutting_board_my_next_ready",
+          3
+        ],
+        [
+          "pick_from_private_region_opp_next",
+          2
+        ],
+        [
+          "wait",
+          1
+        ]
+      ],
+      "place_on_cutting_board_opp_next_to_cut": [
+        [
+          "cut",
+          1
+        ]
+      ]
+    },
+    "real_failure": {
+      "pick_from_cutting_board_my_next_ready": [
+        [
+          "wait",
+          1
+        ],
+        [
+          "pick_from_private_region_opp_next",
+          1
+        ]
+      ],
+      "cut": [
+        [
+          "wait",
+          1
+        ]
+      ]
+    }
+  }
+}

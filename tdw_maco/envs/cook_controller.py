@@ -42,7 +42,11 @@ def get_task_prompt(agent_id, recipe, agents_name= ["Alice", "Bob"]):
 {recipe_strs[0]}
 {recipe_strs[1]}"""
 
-def get_proposal_prompt(agent_id, recipe, agents_name= ["Alice", "Bob"]):
+def get_proposal_prompt(agent_id, recipe, agents_name= ["Alice", "Bob"], steps_taken=0):
+    # Handle None recipe (worker not properly initialized)
+    if recipe is None:
+        recipe = [[], []]  # Default empty recipes
+    
     recipe_strs = []
     for recipe_single in recipe:
         recipe_str = ", ".join(recipe_single)
@@ -53,22 +57,54 @@ def get_proposal_prompt(agent_id, recipe, agents_name= ["Alice", "Bob"]):
         recipe_strs.append(recipe_str)
     agent_name = agents_name[agent_id]
     agent_pos = agents_position[agent_id]
-    return f"""Two agents Alice and Bob are cooperating together to cook at a kitchen counter. Each agent can only operate within the region of one counter edge. The goal is to make a burger and a sandwich. Food items must be stacked on the plate following this order:
-{recipe_strs[0]}
-{recipe_strs[1]}
-Notice some food items may need to be cut on the cutting board first to get the needed one in the recipe. 
-As shown in the image, you're agent {agent_name} near the {agent_pos} edge of the cabinet making the {recipe_strs[agent_id].split(":")[0]} and you can only reach the counter edge near you to pick and place objects, or cut objects on the cutting board. Given your reachability and the current state shown in the image, what are your possible actions?
+    return f"""Two agents, Alice and Bob, are cooperating at a kitchen counter. Each agent can operate only along one counter edge. The goal is to make a burger and a sandwich.
 
-Action Formats:
-1) wait
-2) pick up <obj>
-3) place <obj> onto <loc>
-4) cut <obj>
+Some food items must be cut on the cutting board to obtain the required ingredients.
 
-For a formatted action, replace <obj> with the food item name, such as "the pickle_slice", "the whole_onion", "the burger_bottom", and <loc> with the location such as "the cutting board", "the plate", "the top left corner of the private region".
-For example, the formatted action "place the whole_cheese onto the cutting board" means you place the whole_cheese onto the cutting board so that either agent can cut it to cheese_slice or the other agent may reach it.
+You are agent {agent_name}, near the {agent_pos} edge of the counter, making {recipe_strs[agent_id].split(":")[0]}.  
+You can only pick/place items **along your edge** and cut items **on the cutting board**.
 
-Let's think step by step."""
+There are exactly as many food items as needed—no more, no less. All items must be used. The task ends when both agents finish their recipes.
+
+### Shared Cutting Board Cooperation
+- The **cutting board** is the **only shared region** (capacity: 1 item).  
+  Use it to **cut items** or **pass items** the other agent needs.
+- Each agent also has a **private region** (4 slots) to **temporarily store** items or prevent shared cutting board congestion.
+- If an item **is not part of your recipe**, place it on the cutting board **only when the other agent can likely pick it soon**; otherwise keep it in your private region.
+- If the cutting board holds an item **you need**, take it immediately.
+- The environment automatically ensures that:
+  - “place onto plate” appears **only when the ingredient matches the next recipe order**, and  
+  - “pick up” appears **only for reachable items**.
+- Avoid blocking the cutting board with unnecessary items.  
+  Each step should either (1) advance your recipe, or (2) help the other agent progress.
+
+### Decision
+Given the current visual scene shown in the image, select **exactly one** action from the list below.
+All listed actions are **guaranteed valid** — the environment only includes actions that are logically possible.
+
+**Selection Rules (in order):**
+1. Prefer actions that immediately advance your own recipe.
+   - You can identify the needed ingredient by checking your recipe, action history and dish.
+2. Otherwise, help the other agent without blocking the cutting board.
+   - You can identify the needed ingredient by checking the other agent's recipe and dish.
+3. Use your private region to temporarily store items or to prevent congestion on the shared cutting board.
+
+### Progress
+You've taken **{steps_taken-1}/60** steps.  
+Steps remaining: **{60 - (steps_taken-1)}**.
+
+Recipe (stack in order):
+- Yours: {recipe_strs[agent_id]}
+- Other agent: {recipe_strs[1 - agent_id]}
+
+Action History (excluding WAIT):
+#ACTION_HISTORY#
+
+Possible Actions:  
+#POSSIBLE_ACTIONS#
+
+Output (strictly one line, no reasoning):  
+Next action: <one of the listed actions>"""
 
 def get_value_prompt(agent_id, recipe, agents_name= ["Alice", "Bob"]):
     recipe_strs = []
@@ -246,15 +282,23 @@ class CookController(MacoController):
         else:
             return self.reachable_bins[agent_id][place_type - PLACE_IN_THE_PRIVATE_REGION_TOP_LEFT]
 
+    def within_agent_reach(self, agent_id, obj_pos):
+        """Check if an object is within the agent's reachable region"""
+        return self.reachable_region[agent_id][0] < obj_pos[0] < self.reachable_region[agent_id][2] and \
+               self.reachable_region[agent_id][1] < obj_pos[2] < self.reachable_region[agent_id][3]
+
     def parse_text_action(self, action, agent_id):
         try:
             if action == "wait":
                 return {"type": "wait"}
             elif "pick up the " in action:
                 obj_name = action.split("pick up the ")[1]
+                # Remove "from the cutting board" or other location specifiers
+                if " from " in obj_name:
+                    obj_name = obj_name.split(" from ")[0]
                 obj = None
                 for o in self.obj:
-                    if o["name"] == obj_name:
+                    if o["name"] == obj_name and self.within_agent_reach(agent_id, o["pos"]):
                         obj = o
                         break
                 if obj is None:
@@ -284,6 +328,9 @@ class CookController(MacoController):
 
             elif "place the " in action:
                 obj_name, loc_name = action.split("place the ")[1].split(" onto the ")
+                # Remove "from the cutting board" or other source location specifiers
+                if " from " in obj_name:
+                    obj_name = obj_name.split(" from ")[0]
 
                 obj = None
                 for o in self.obj:

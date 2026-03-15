@@ -1,0 +1,7 @@
+__pycache__
+tdw_maco/results
+tdw_maco/tdw_asset_cache
+modl-100.pt
+*.pkl
+*.log
+chat_log/

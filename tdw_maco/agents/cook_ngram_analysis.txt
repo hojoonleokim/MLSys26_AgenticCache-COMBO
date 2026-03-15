@@ -1,0 +1,133 @@
+Task: COOK
+Analysis: Action Bigrams (2-grams)
+================================================================================
+
+Total bigrams: 97
+Unique bigrams: 34
+Unique action types: 16
+
+================================================================================
+WAIT PATTERN ANALYSIS
+--------------------------------------------------------------------------------
+Total wait actions: 27
+  - Wait was only option: 17
+  - Wait despite alternatives: 10
+Consecutive wait streaks: [10, 8, 2, 1, 1, 1, 1, 1, 1, 1]
+  - Max consecutive: 10
+  - Avg streak length: 2.7
+Alternative action types available when wait was chosen:
+  - pick_from_private_region_my_later: 9 times
+  - pick_from_private_region_opp_later: 8 times
+  - pick_from_cutting_board_opp_next_ready: 6 times
+  - pick_from_private_region_opp_next: 2 times
+
+================================================================================
+wait
+--------------------------------------------------------------------------------
+1. [wait -> wait]: 17 (68.0%)
+2. [wait -> pick_from_cutting_board_my_next_ready]: 3 (12.0%)
+3. [wait -> pick_from_private_region_opp_later]: 3 (12.0%)
+4. [wait -> pick_from_cutting_board_opp_next_ready]: 1 (4.0%)
+5. [wait -> pick_from_private_region_opp_next]: 1 (4.0%)
+
+================================================================================
+place_on_plate
+--------------------------------------------------------------------------------
+1. [place_on_plate -> pick_from_private_region_my_next]: 7 (50.0%)
+2. [place_on_plate -> pick_from_private_region_opp_next]: 4 (28.6%)
+3. [place_on_plate -> pick_from_cutting_board_my_next_ready]: 2 (14.3%)
+4. [place_on_plate -> cut]: 1 (7.1%)
+
+================================================================================
+pick_from_private_region_opp_next
+--------------------------------------------------------------------------------
+1. [pick_from_private_region_opp_next -> place_on_cutting_board_opp_next_ready]: 6 (60.0%)
+2. [pick_from_private_region_opp_next -> place_in_private_region_opp_next]: 4 (40.0%)
+
+================================================================================
+pick_from_private_region_my_next
+--------------------------------------------------------------------------------
+1. [pick_from_private_region_my_next -> place_on_plate]: 9 (100.0%)
+
+================================================================================
+place_on_cutting_board_opp_next_ready
+--------------------------------------------------------------------------------
+1. [place_on_cutting_board_opp_next_ready -> wait]: 5 (62.5%)
+2. [place_on_cutting_board_opp_next_ready -> pick_from_private_region_opp_later]: 2 (25.0%)
+3. [place_on_cutting_board_opp_next_ready -> pick_from_cutting_board_opp_next_ready]: 1 (12.5%)
+
+================================================================================
+pick_from_cutting_board_my_next_ready
+--------------------------------------------------------------------------------
+1. [pick_from_cutting_board_my_next_ready -> place_on_plate]: 7 (100.0%)
+
+================================================================================
+place_in_private_region_opp_next
+--------------------------------------------------------------------------------
+1. [place_in_private_region_opp_next -> pick_from_cutting_board_my_next_ready]: 3 (50.0%)
+2. [place_in_private_region_opp_next -> pick_from_private_region_opp_next]: 2 (33.3%)
+3. [place_in_private_region_opp_next -> wait]: 1 (16.7%)
+
+================================================================================
+none
+--------------------------------------------------------------------------------
+1. [none -> pick_from_private_region_my_next]: 2 (50.0%)
+2. [none -> pick_from_private_region_my_later]: 1 (25.0%)
+3. [none -> wait]: 1 (25.0%)
+
+================================================================================
+pick_from_private_region_opp_later
+--------------------------------------------------------------------------------
+1. [pick_from_private_region_opp_later -> place_on_cutting_board_opp_later_ready]: 2 (66.7%)
+2. [pick_from_private_region_opp_later -> place_on_cutting_board_opp_later_to_cut]: 1 (33.3%)
+
+================================================================================
+pick_from_private_region_my_later
+--------------------------------------------------------------------------------
+1. [pick_from_private_region_my_later -> place_on_cutting_board_my_later_to_cut]: 1 (50.0%)
+2. [pick_from_private_region_my_later -> place_in_private_region_my_later]: 1 (50.0%)
+
+================================================================================
+cut
+--------------------------------------------------------------------------------
+1. [cut -> pick_from_cutting_board_my_later_ready]: 1 (50.0%)
+2. [cut -> pick_from_cutting_board_my_next_ready]: 1 (50.0%)
+
+================================================================================
+place_in_private_region_my_later
+--------------------------------------------------------------------------------
+1. [place_in_private_region_my_later -> pick_from_private_region_my_later]: 1 (50.0%)
+2. [place_in_private_region_my_later -> wait]: 1 (50.0%)
+
+================================================================================
+pick_from_cutting_board_opp_next_ready
+--------------------------------------------------------------------------------
+1. [pick_from_cutting_board_opp_next_ready -> place_in_private_region_opp_next]: 2 (100.0%)
+
+================================================================================
+place_on_cutting_board_my_later_to_cut
+--------------------------------------------------------------------------------
+1. [place_on_cutting_board_my_later_to_cut -> cut]: 1 (100.0%)
+
+================================================================================
+pick_from_cutting_board_my_later_ready
+--------------------------------------------------------------------------------
+1. [pick_from_cutting_board_my_later_ready -> place_in_private_region_my_later]: 1 (100.0%)
+
+================================================================================
+place_on_cutting_board_opp_next_to_cut
+--------------------------------------------------------------------------------
+1. [place_on_cutting_board_opp_next_to_cut -> cut]: 1 (100.0%)
+
+================================================================================
+REAL FAILURE BIGRAMS
+--------------------------------------------------------------------------------
+Total: 3 bigrams
+
+  cut FAILED
+    1. [cut FAILED -> wait]: 1 (100.0%)
+
+  pick_from_cutting_board_my_next_ready FAILED
+    1. [pick_from_cutting_board_my_next_ready FAILED -> wait]: 1 (50.0%)
+    2. [pick_from_cutting_board_my_next_ready FAILED -> pick_from_private_region_opp_next]: 1 (50.0%)
+

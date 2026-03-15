@@ -1,0 +1,229 @@
+{
+  "selection_rates": {
+    "pick_from_private_region_A": {
+      "chosen": 7,
+      "total": 18,
+      "rate": 0.388889
+    },
+    "pick_from_left_border_A": {
+      "chosen": 22,
+      "total": 26,
+      "rate": 0.846154
+    },
+    "wait": {
+      "chosen": 38,
+      "total": 140,
+      "rate": 0.271429
+    },
+    "place_on_left_border_A": {
+      "chosen": 9,
+      "total": 40,
+      "rate": 0.225
+    },
+    "place_on_right_border_A": {
+      "chosen": 20,
+      "total": 35,
+      "rate": 0.571429
+    },
+    "place_in_puzzle_A": {
+      "chosen": 8,
+      "total": 8,
+      "rate": 1.0
+    },
+    "place_in_private_region_A": {
+      "chosen": 8,
+      "total": 37,
+      "rate": 0.216216
+    },
+    "pick_from_right_border_B": {
+      "chosen": 2,
+      "total": 3,
+      "rate": 0.666667
+    },
+    "pick_from_right_border_A": {
+      "chosen": 12,
+      "total": 26,
+      "rate": 0.461538
+    },
+    "pick_from_left_border_B": {
+      "chosen": 8,
+      "total": 8,
+      "rate": 1.0
+    },
+    "pick_from_private_region_B": {
+      "chosen": 6,
+      "total": 16,
+      "rate": 0.375
+    }
+  },
+  "bigrams": {
+    "success": {
+      "none": [
+        [
+          "pick_from_left_border_A",
+          2
+        ],
+        [
+          "pick_from_right_border_A",
+          2
+        ]
+      ],
+      "pick_from_private_region": [
+        [
+          "place_on_right_border_A",
+          6
+        ],
+        [
+          "place_on_left_border_A",
+          3
+        ],
+        [
+          "place_in_private_region_A",
+          3
+        ],
+        [
+          "place_in_puzzle_A",
+          1
+        ]
+      ],
+      "place_in_puzzle": [
+        [
+          "wait",
+          4
+        ],
+        [
+          "pick_from_left_border_B",
+          2
+        ],
+        [
+          "pick_from_private_region_B",
+          1
+        ]
+      ],
+      "wait": [
+        [
+          "wait",
+          24
+        ],
+        [
+          "pick_from_left_border_A",
+          8
+        ],
+        [
+          "pick_from_right_border_A",
+          3
+        ]
+      ],
+      "pick_from_left_border": [
+        [
+          "place_on_right_border_A",
+          13
+        ],
+        [
+          "place_in_puzzle_A",
+          7
+        ],
+        [
+          "place_on_left_border_A",
+          5
+        ],
+        [
+          "place_in_private_region_A",
+          2
+        ]
+      ],
+      "place_in_private_region": [
+        [
+          "pick_from_left_border_B",
+          4
+        ],
+        [
+          "pick_from_private_region_A",
+          3
+        ],
+        [
+          "pick_from_right_border_B",
+          1
+        ]
+      ],
+      "place_on_left_border": [
+        [
+          "pick_from_left_border_A",
+          7
+        ],
+        [
+          "wait",
+          1
+        ],
+        [
+          "pick_from_right_border_B",
+          1
+        ]
+      ],
+      "place_on_right_border": [
+        [
+          "pick_from_right_border_A",
+          7
+        ],
+        [
+          "wait",
+          5
+        ],
+        [
+          "pick_from_private_region_B",
+          5
+        ],
+        [
+          "pick_from_left_border_B",
+          2
+        ]
+      ],
+      "pick_from_right_border": [
+        [
+          "place_in_private_region_A",
+          2
+        ],
+        [
+          "place_on_right_border_A",
+          1
+        ],
+        [
+          "place_on_left_border_A",
+          1
+        ]
+      ]
+    },
+    "real_failure": {
+      "pick_from_left_border": [
+        [
+          "pick_from_private_region_B",
+          2
+        ],
+        [
+          "wait",
+          1
+        ]
+      ],
+      "place_on_right_border": [
+        [
+          "place_in_private_region_A",
+          1
+        ]
+      ],
+      "pick_from_right_border": [
+        [
+          "pick_from_left_border_B",
+          5
+        ],
+        [
+          "wait",
+          3
+        ],
+        [
+          "pick_from_private_region_B",
+          2
+        ]
+      ]
+    }
+  }
+}

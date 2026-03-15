@@ -1,0 +1,10 @@
+Task: GAME
+Analysis: Action Selection Rates
+================================================================================
+
+1. place_in_puzzle: 79/79 (100.00%)
+2. place_on_shared_region: 307/478 (64.23%)
+3. pick_from_shared_region: 336/563 (59.68%)
+4. pick_from_private_region: 159/319 (49.84%)
+5. wait: 535/1664 (32.15%)
+6. place_in_private_region: 108/463 (23.33%)

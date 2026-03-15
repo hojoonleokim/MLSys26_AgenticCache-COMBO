@@ -117,20 +117,67 @@ class Challenge:
 			metadata = [] # {"step": 0, "actions": "", "frame_start": 0, "frame_end": 13, "prompt": ""}
 			camera_matrix_metadata = dict() # dump to pickle
 			self.next_agent_id = None
+			loop_start_time = time.time()
 			while not done:
 				actions_to_print = {}
 				# if self.save_img: self.env.save_images(os.path.join(self.output_dir, str(episode), 'Images'))
-
-				plan_success, actions = self.plan_agent_actions(agents, state)
-
+				print(f"######Step {step_num}######")
+				
+				# Call act() for all agents to submit target queries
+				plan_success, _ = self.plan_agent_actions(agents, state, episode, step_num)
 				if not plan_success:
 					done = True
 					break
-
-				step_num += 1
+				
+				# Wait for all agents' target plans to be ready for current step
+				while True:
+					# Check target pool for all agents
+					for agent in agents:
+						agent.check_async_vlm_result()
+					
+					# Check if all agents have target plan for current step
+					all_ready = all(step_num in agent.target_plan for agent in agents)
+					
+					if all_ready:
+						break
+					
+					time.sleep(1)  # Short sleep to avoid busy waiting
+				
+				# Build actions from target plans
+				actions = {}
+				for agent in agents:
+					target_plan = agent.target_plan[step_num]
+					print(f"Agent {agent.agent_id} target plan for step {step_num}: {target_plan}")
+					
+					# Create action from target plan
+					# target_plan structure: {'action': [action_string], 'raw_response': response_string}
+					if target_plan and 'action' in target_plan and len(target_plan['action']) > 0:
+						action_prompt = target_plan['action'][0]
+						# Validate action prompt is not None or empty
+						if action_prompt is None or action_prompt == "":
+							print(f"⚠️  Agent {agent.agent_id}: Invalid action prompt, using 'wait'")
+							action_prompt = "wait"
+						action = {"type": None, "prompt": action_prompt}
+					else:
+						action = {"type": None, "prompt": "wait"}
+					actions[str(agent.agent_id)] = action
+					
+					# Add action to agent's action_history
+					agent.action_history.append(action)
+					agent.send_futures()
 				frame_start = self.env.num_frames
 				last_obs = convert_np_for_print(state["0"]["objects"])
+				print(f"Agent actions: {actions}")
 				state, reward, done, info = self.env.step(actions)
+				
+				# Print action results for each agent
+				step_results = []
+				for agent_id in range(len(agents)):
+					if state[str(agent_id)]["rejected"]:
+						step_results.append(f"Agent {agent_id}: ❌ FAILED ({state[str(agent_id)]['rejected_reason']})")
+					else:
+						step_results.append(f"Agent {agent_id}: ✅ SUCCESS")
+				print(f"Results: {' | '.join(step_results)}")
 				
 				metadata.append({"step": step_num, "obs": last_obs, "actions": actions_to_print, "frame_start": frame_start, "frame_end": self.env.num_frames, "prompt": "", "prompt_value": info["prompt_value"]})
 				
@@ -160,18 +207,28 @@ class Challenge:
 				local_reward += reward
 				self.logger.info(
 					f"Executing step {step_num} for episode: {episode}, actions: {actions}, frame: {self.env.num_frames}")
+				step_num += 1
 				if done or step_num > self.max_steps:
 					break
 
+			loop_elapsed_time = time.time() - loop_start_time
+			
+			# Cleanup VLM pools for all agents
+			for agent in agents:
+				if hasattr(agent, 'cleanup'):
+					agent.cleanup()
+			
 			if 'success' in info:
 				result = {
 					"success": info['success'],
 					"steps": step_num,
+					"time": loop_elapsed_time,
 				}
 			else:
 				result = {
 					"success": False,
 					"steps": step_num,
+					"time": loop_elapsed_time,
 				}
 
 			with open(os.path.join(self.output_dir, str(episode), 'result_episode.json'), 'w') as f:
@@ -179,6 +236,19 @@ class Challenge:
 			# print(f"metadata: {metadata}")
 			with open(os.path.join(self.output_dir, str(episode), 'metadata.json'), 'w') as f:
 				json.dump(metadata, f, indent=4)
+
+			# Save real_action_history for each agent (append to single file)
+			with open(os.path.join(self.output_dir, 'action_history_all.txt'), 'a') as f:
+				f.write(f'\n{"#" * 50}\n')
+				f.write(f'Episode {episode}\n')
+				f.write(f'{"#" * 50}\n\n')
+				
+				for agent_id, agent in enumerate(agents):
+					if hasattr(agent, 'real_action_history'):
+						f.write(f'Agent {agent_id}:\n')
+						for action in agent.real_action_history:
+							f.write(f'  {action}\n')
+						f.write('\n')
 
 			# print("camera_matrix_metadata: ", camera_matrix_metadata)
 			if self.save_img:
@@ -200,15 +270,15 @@ class Challenge:
 		self.logger.info('time: {}'.format(time.time() - start))
 		return avg_succ, avg_succ_steps
 	
-	def plan_agent_actions(self, agents, state):
+	def plan_agent_actions(self, agents, state, episode, step_num):
 		actions = {}
 		for agent in agents:
 			agent_id = agent.agent_id
-			if agent.agent_type == 'combo_agent':
-				obs = self.filter_obs(state[str(agent_id)])
-			else:
-				obs = state[str(agent_id)]
-			action = agent.act(obs)
+			# if agent.agent_type == 'combo_agent':
+			# 	obs = self.filter_obs(state[str(agent_id)])
+			# else:
+			obs = state[str(agent_id)] # How to form state
+			action = agent.act(obs,episode, step_num)
 			# print(agent_id, action)
 			actions[str(agent_id)] = action
 		return True, actions
@@ -318,7 +388,7 @@ def main():
 			agents.append(GamePlanAgent(i, logger, args.output_dir, False, fix_clockwise=True))
 		elif agent == 'game_plan_agent_counter_clockwise': # agent with fixed counter-clockwise passing direction
 			agents.append(GamePlanAgent(i, logger, args.output_dir, False, fix_clockwise=False))
-		elif agent == 'genco_agent':
+		elif agent in ['combo_agent', 'genco_agent']:
 			agents.append(COMBOAgent(
 				task=args.task,
 				agent_id=i,
@@ -338,12 +408,21 @@ def main():
 				plan_beam=args.plan_beam,
 				cot=args.cot,
 				guidance_weight=args.guidance_weight,
+				run_id=args.run_id,
+				experiment_name=args.experiment_name,
 			))
 		else:
 			pass
 	try:
 		challenge.submit(agents, logger, args.eval_episodes, args.start_id, args.num_runs)
 	finally:
+		# Clean up agents before closing challenge
+		for agent in agents:
+			if hasattr(agent, 'cleanup'):
+				try:
+					agent.cleanup()
+				except Exception as e:
+					print(f"Warning: Error cleaning up agent: {e}")
 		challenge.close()
 
 

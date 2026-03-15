@@ -33,23 +33,91 @@ def get_task_prompt(agent_id, recipe=None, agents_name=["Alice", "Bob", "Charlie
 	agents_name_str = ", ".join(agents_name[:-1]) + ' and ' + agents_name[-1]
 	return f"""{number2word[num_agents]} agents {agents_name_str} around a square table are cooperating together to solve a puzzle game. Each agent can only operate within the region of one table edge. The goal is to put all the pieces of the puzzle on the table into the correct puzzle box."""
 
-def get_proposal_prompt(agent_id, recipe=None, agents_name=["Alice", "Bob", "Charlie", "David"]):
+def get_proposal_prompt(agent_id, recipe=None, agents_name=["Alice", "Bob", "Charlie", "David"], steps_taken=0):
 	agent_name = agents_name[agent_id]
 	agent_pos = agents_position[agent_id]
 	num_agents = len(agents_name)
 	agents_name_str = ", ".join(agents_name[:-1]) + ' and ' + agents_name[-1]
-	return f"""{number2word[num_agents]} agents {agents_name_str} around a square table are cooperating together to solve a puzzle game. Each agent can only operate within the region of one table edge. The goal is to put all the pieces of the puzzle on the table into the correct puzzle box.
-As shown in the image, you're agent {agent_name} near the {agent_pos} edge of the table and you can only reach the table edge near you to pick and place objects. Given your reachability and the current state shown in the image, what are your possible actions?
+	return f"""Four agents {agents_name_str} are cooperating around a square table to solve a puzzle game.  
+Each agent can operate only within the region along one edge (north, east, south, west).  
+The goal is to place all puzzle pieces into their correct positions inside the puzzle box.
 
-Action Formats:
-1) wait
-2) pick up <obj>
-3) place <obj> onto <loc>
+You are agent {agent_name}, near the {agent_pos} edge.  
+You can only interact with pieces **along your edge**, including both **borders** of your reachable region.
 
-For a formatted action, replace <obj> with the bi-colored piece name, such as "the green-black piece", "the aqua-yellow piece", "the brown-green piece", and <loc> with the location such as "the top edge of the puzzle box", "the bottom left corner of the puzzle box", "the left border of the reachable region", "the private region right to the puzzle box".
-For example, the formatted action "place the aqua-yellow piece onto the left border of the reachable region" means you place the aqua-yellow piece onto the left border of the reachable region so that other agents may reach it.
+### Shared-Border Cooperation
+- Each table border is a **shared region** between two adjacent agents.  
+  It is used **to pass pieces** between them (capacity: 1 piece per border).
+- Each agent also has **two private regions** for temporarily holding or prevent shared border congestion.
+- If you hold a piece **not needed for your puzzle**, place it on a shared border **only when the adjacent agent can likely pick it soon**; otherwise keep it in your private region.
+- If a shared border has a piece, pick it up to check if it fits your puzzle; otherwise, pass it to others.
+- The environment automatically ensures that:
+  - “place into puzzle box” appears only when the held piece **belongs to your puzzle**, and  
+  - “pick up” appears only for **reachable pieces**.
 
-Let's think step by step."""
+### Action Selection
+Given the current visual scene shown in the image, select **exactly one** action from the list below.
+All listed actions are **guaranteed valid** — the environment filters out unreachable or invalid actions.
+
+**Selection Rules (in order):**
+1. Prefer placing your correct piece into the puzzle box.
+   - You can decide which piece to place by checking your puzzle box.
+2. If (1) is not possible, pass the piece via a shared border.
+   - You can choose which border to use by checking the other agents' puzzle boxes.
+3. Use private regions to temporarily store pieces or to prevent congestion of the shared borders.
+
+### Progress
+You've taken **{steps_taken-1}/60** steps.  
+Steps remaining: **{60 - (steps_taken-1)}**.
+
+Action History (excluding WAIT):  
+#ACTION_HISTORY#
+
+Possible Actions:  
+#POSSIBLE_ACTIONS#
+
+Output (strictly one line, no reasoning):  
+Next action: <one of the listed actions>"""
+
+def get_future_proposal_prompt(agent_id, recipe=None, agents_name=["Alice", "Bob", "Charlie", "David"], steps_taken=0):
+	agent_name = agents_name[agent_id]
+	agent_pos = agents_position[agent_id]
+	num_agents = len(agents_name)
+	agents_name_str = ", ".join(agents_name[:-1]) + ' and ' + agents_name[-1]
+	return f"""Four agents {agents_name_str} are cooperating around a square table to solve a puzzle game.  
+Each agent can operate only within the region along one edge (north, east, south, west).  
+The goal is to place all puzzle pieces into their correct positions inside the puzzle box.
+
+You are agent {agent_name}, near the {agent_pos} edge.  
+You can only interact with pieces **along your edge**, including both **borders** of your reachable region.
+
+### Shared-Border Cooperation
+- Each table border is a **shared region** between two adjacent agents.  
+  It is used **to pass pieces** between them (capacity: 1 piece per border).
+- Each agent also has **two private regions** for temporarily holding or prevent shared border congestion.
+- If you hold a piece **not needed for your puzzle**, place it on a shared border **only when the adjacent agent can likely pick it soon**; otherwise keep it in your private region.
+- If a shared border has a piece, pick it up to check if it fits your puzzle; otherwise, pass it to others.
+
+### Future Action Prediction
+The image shows a **previous state** of the table.  
+Based on this previous state and the action history, **predict the next action** you will take after your most recent action completes.
+
+**Selection Rules (in order):**
+1. Prefer placing your correct piece into the puzzle box.
+   - You can decide which piece to place by checking your puzzle box.
+2. If (1) is not possible, pass the piece via a shared border.
+   - You can choose which border to use by checking the other agents' puzzle boxes.
+3. Use private regions to temporarily store pieces or to prevent congestion of the shared borders.
+
+### Progress
+You've taken **{steps_taken-1}/60** steps.  
+Steps remaining: **{60 - (steps_taken-1)}**.
+
+Action History (excluding WAIT):  
+#ACTION_HISTORY#
+
+Output (strictly one line, no reasoning):  
+Next action: <describe the action you will take>"""
 
 def get_value_prompt(agent_id, recipe=None, agents_name=["Alice", "Bob", "Charlie", "David"]):
 	num_agents = len(agents_name)
@@ -323,19 +391,33 @@ class GameController(MacoController):
 
 		return self.obj
 
+	def within_agent_reach(self, agent_id, obj_pos):
+		"""Check if an object is within the agent's reachable region"""
+		return self.reachable_region[agent_id][0] < obj_pos[0] < self.reachable_region[agent_id][2] and \
+		       self.reachable_region[agent_id][1] < obj_pos[2] < self.reachable_region[agent_id][3]
+
 	def parse_text_action(self, action, agent_id):
 		try:
 			if action == "wait":
 				return {"type": "wait"}
 			elif action.startswith("pick up"):
-				obj_semantic_name = action.split("pick up ")[1].replace(" ", "_")
-				obj_id = self.semantic_name_2_id_dict[obj_semantic_name]
+				# Handle "pick up {obj} from the {location}" format
+				if " from the " in action:
+					obj_semantic_name = action.split("pick up ")[1].split(" from the ")[0].replace(" ", "_")
+				else:
+					obj_semantic_name = action.split("pick up ")[1].replace(" ", "_")
+				# Find reachable object with matching semantic name
+				obj_id = None
 				obj_pos = None
 				for obj in self.obj:
-					if obj["id"] == obj_id:
+					if obj["id"] in self.semantic_name_dict and \
+					   self.semantic_name_dict[obj["id"]] == obj_semantic_name and \
+					   self.within_agent_reach(agent_id, obj["pos"]):
+						obj_id = obj["id"]
 						obj_pos = obj["pos"]
 						break
-				assert obj_pos is not None, f"obj_pos is None for {obj_semantic_name} {obj_id}"
+				if obj_id is None or obj_pos is None:
+					return {"type": "wait", "reject": True}
 				if int(agent_id) == 0 or int(agent_id) == 2:
 					action = {"type": "pick", "obj_id": obj_id, "pos": np.array(obj_pos), "lift_up": True, "set_kinematic_state": True}
 				else:

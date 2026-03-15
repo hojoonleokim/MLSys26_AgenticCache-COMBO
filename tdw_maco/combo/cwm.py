@@ -56,6 +56,8 @@ class CWM:
         self.init_inpainting_vdm(inpainting_model_id)
 
     def init_inpainting_vdm(self, model_id):
+        if not model_id:
+            return
         print("Loading VDM topdown inpainting model...")
         unet = UnetTDWMacoInpainting(embed_dim=4096)
 
@@ -72,7 +74,11 @@ class CWM:
 			guidance_weight=0,
         )
 
-        state_dict = torch.load(model_id, map_location='cpu')
+        checkpoint = torch.load(model_id, map_location='cpu')
+        # Filter out training metadata, keep only model weights
+        if 'model' in checkpoint:
+            state_dict = checkpoint['model']
+
         diffusion.load_state_dict(state_dict)
         self.inpainting_model = diffusion.to(self.device).eval()
 
@@ -100,7 +106,7 @@ class CWM:
         self.model = diffusion.to(self.device).eval()
 
     def init_superres(self, model_id):
-        if model_id is None:
+        if not model_id:
             return
         print("Loading super resolution model...")
         unet = UnetSuperRes(target_size=self.superres_size)
@@ -157,7 +163,7 @@ class CWM:
         return text_embed, mask, comp_mask
 
     def sample(self, text_goal, inpainting_text_goal, x_cond):
-        x_cond = torch.tensor(x_cond).to(self.device)
+        x_cond = torch.as_tensor(x_cond, device=self.device)
         bs = x_cond.size(0)
 
         if text_goal[0] is None:
@@ -207,11 +213,11 @@ class CWM:
             conds, text_goal, inpainting_text_goal, output_dir, idx = input_dict
             if text_goal is None:
                 output_path = os.path.join(output_dir, f'{idx}.png')
-                utils.save_image(torch.tensor(topdown[i]).float() / 255, output_path)
+                utils.save_image(torch.as_tensor(topdown[i]).float() / 255, output_path)
                 output_paths.append(output_path)
             else:
                 conds = conds.view(-1, 3, *self.target_size)
-                save_img = torch.concat([conds, torch.tensor(output[i]).float() / 255], dim=0)
+                save_img = torch.concat([conds, torch.as_tensor(output[i]).float() / 255], dim=0)
                 utils.save_image(save_img, os.path.join(output_dir, f"outcome_debug_{idx}.png"), nrow=self.sample_per_seq-1+conds.size(0))
                 output_path = os.path.join(output_dir, f'outcome_{idx}.png')
                 Image.fromarray(np.array(image[i], dtype=np.uint8).transpose((1, 2, 0))).save(output_path)

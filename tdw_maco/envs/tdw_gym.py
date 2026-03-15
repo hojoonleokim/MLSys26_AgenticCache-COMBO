@@ -23,11 +23,32 @@ from PIL import Image
 import json
 import pickle
 from functools import partial
+import signal
+from tenacity import retry, wait_fixed, retry_if_exception_type
 
 from utils.utils import get_ego_topdown
 from replicant import Replicant
 import open3d as o3d
 from copy import deepcopy
+
+class TimeoutException(Exception):
+    pass
+
+def timeout_handler(signum, frame):
+    raise TimeoutException("Function execution exceeded the timeout limit")
+
+@retry(wait=wait_fixed(5), retry=retry_if_exception_type(TimeoutException))  # wait 5 seconds between retries
+def might_fail_launch(launch, port=None):
+    if port is not None:
+        print("kill failure launch ...", f"ps ux | grep TDW.x86_64 | awk {{'print $2'}} | xargs kill")
+        os.system(f"ps ux | grep TDW.x86_64 | awk {{'print $2'}} | xargs kill")
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(600)
+    try:
+        print("Trying to launch tdw ...")
+        return launch()
+    finally:
+        signal.alarm(0)
 
 PLACE_INTO_PUZZLE = 1
 PLACE_ON_THE_PLATE = 12
@@ -152,10 +173,13 @@ class TDW(Env):
 			self.controller.socket.close()
 		if self.task == 'cook':
 			assert self.number_of_agents == 2, "agent number not match!"
-			self.controller = CookController(port=self.port, check_version=True, launch_build=self.launch_build,
-											 screen_width=self.screen_size, screen_height=self.screen_size,
-											 enable_collision_detection=self.enable_collision_detection,
-											 logger_dir=options['output_dir'])
+			self.controller = might_fail_launch(
+				partial(CookController, port=self.port, check_version=True, launch_build=self.launch_build,
+						screen_width=self.screen_size, screen_height=self.screen_size,
+						enable_collision_detection=self.enable_collision_detection,
+						logger_dir=options['output_dir']),
+				port=self.port
+			)
 		elif self.task == 'game' or self.task == 'game_3' or self.task == 'game_2':
 			if self.task == 'game':
 				assert self.number_of_agents == 4, "agent number not match!"
@@ -164,10 +188,13 @@ class TDW(Env):
 			elif self.task == 'game_2':
 				assert self.number_of_agents == 2, "agent number not match!"
 
-			self.controller = GameController(port=self.port, check_version=True, launch_build=self.launch_build,
-											 screen_width=self.screen_size, screen_height=self.screen_size,
-											 enable_collision_detection=self.enable_collision_detection,
-											 logger_dir=options['output_dir'], number_of_agents=self.number_of_agents)
+			self.controller = might_fail_launch(
+				partial(GameController, port=self.port, check_version=True, launch_build=self.launch_build,
+						screen_width=self.screen_size, screen_height=self.screen_size,
+						enable_collision_detection=self.enable_collision_detection,
+						logger_dir=options['output_dir'], number_of_agents=self.number_of_agents),
+				port=self.port
+			)
 
 			
 		

@@ -1,0 +1,11 @@
+Task: COOK
+Analysis: Action Selection Rates
+================================================================================
+
+1. place_on_plate: 155/155 (100.00%)
+2. cut: 22/39 (56.41%)
+3. pick_from_private_region: 309/725 (42.62%)
+4. pick_from_cutting_board: 99/243 (40.74%)
+5. wait: 564/1438 (39.22%)
+6. place_in_private_region: 152/399 (38.10%)
+7. place_on_cutting_board: 100/379 (26.39%)

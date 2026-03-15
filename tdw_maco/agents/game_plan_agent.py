@@ -496,6 +496,80 @@ class GamePlanAgent:
 		return self.reachable_region[0] < pos[0] < self.reachable_region[2] and self.reachable_region[1] < pos[2] < \
 			self.reachable_region[3]
 
+	def get_available_action_prompts(self, obs):
+		"""
+		Generate and return a list of available action prompts for the current state.
+		Returns: List of prompt strings
+		"""
+		# Update state
+		self.id2name = {obj['id']: obj['name'] for obj in obs["objects"]}
+		self.name2id = {obj['name']: obj['id'] for obj in obs["objects"] if obj['name'] is not None}
+		self.id2pos = {obj['id']: obj['pos'] for obj in obs["objects"]}
+		
+		# Get reachable pieces
+		can_reach_ids = [None for _ in range(len(self.reachable_bins))]
+		for i, pos in enumerate(self.reachable_bins):
+			for puzzle_id in self.puzzle_ids:
+				for piece_id in self.puzzle_id2piece_id[puzzle_id]:
+					if piece_id in self.id2pos and l2_dist(self.id2pos[piece_id], pos) < BIN_DIST_THRESHOLD:
+						can_reach_ids[i] = piece_id
+						break
+		
+		# Generate possible actions
+		possible_actions = [{"type": "wait", "prompt": "wait"}]
+		
+		if self.object_in_hand is None:
+			# Pick actions from reachable pieces
+			for piece_id in can_reach_ids:
+				if piece_id is not None:
+					action = {"type": "pick", "obj_id": piece_id, "obj_name": self.id2name[piece_id], 
+							  "pos": np.array(self.id2pos[piece_id]), "lift_up": True, "set_kinematic_state": True}
+					action["prompt"] = self.action2prompt(action)
+					possible_actions.append(action)
+		else:
+			# Place actions to bins
+			for i, pos in enumerate(self.reachable_bins):
+				if can_reach_ids[i] is None:
+					if self.is_clockwise:
+						if i == 0:
+							place_type = PLACE_ON_THE_RIGHT_BORDER
+						elif i == 1:
+							place_type = PLACE_INSIDE_PRIVATE_AREA_RIGHT
+						elif i == 2:
+							place_type = PLACE_INSIDE_PRIVATE_AREA_LEFT
+						elif i == 3:
+							place_type = PLACE_ON_THE_LEFT_BORDER
+						else:
+							raise NotImplementedError
+					else:
+						if i == 0:
+							place_type = PLACE_ON_THE_LEFT_BORDER
+						elif i == 1:
+							place_type = PLACE_INSIDE_PRIVATE_AREA_LEFT
+						elif i == 2:
+							place_type = PLACE_INSIDE_PRIVATE_AREA_RIGHT
+						elif i == 3:
+							place_type = PLACE_ON_THE_RIGHT_BORDER
+						else:
+							raise NotImplementedError
+					
+					action = {"type": "place", "obj_id": self.object_in_hand, "obj_name": self.id2name[self.object_in_hand], 
+							  "pos": np.array(pos), "place_type": place_type, "set_kinematic_state": True}
+					action["prompt"] = self.action2prompt(action)
+					possible_actions.append(action)
+			
+			# Place actions to puzzle box
+			if self.object_in_hand in self.puzzle_id2piece_id[self.puzzle_id]:
+				place_type = PLACE_INTO_PUZZLE
+				for semantic_pos in self.annotation_dict[self.object_in_hand]:
+					action = {"type": "place", "obj_id": self.object_in_hand, "obj_name": self.id2name[self.object_in_hand], 
+							  "pos": np.array(self.puzzle_pos), "place_type": place_type, "set_kinematic_state": True}
+					action["prompt"] = self.action2prompt(action, fix_semantic_pos=semantic_pos)
+					possible_actions.append(action)
+		
+		# Return only prompt strings
+		return [action["prompt"] for action in possible_actions]
+
 	def check_goal(self, obs):
 		completed = 0
 		all = 0

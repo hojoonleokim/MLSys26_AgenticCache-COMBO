@@ -117,11 +117,12 @@ class Challenge:
 			metadata = [] # {"step": 0, "actions": "", "frame_start": 0, "frame_end": 13, "prompt": ""}
 			camera_matrix_metadata = dict() # dump to pickle
 			self.next_agent_id = None
+			loop_start_time = time.time()
 			while not done:
 				actions_to_print = {}
 				# if self.save_img: self.env.save_images(os.path.join(self.output_dir, str(episode), 'Images'))
 
-				plan_success, actions = self.plan_agent_actions(agents, state)
+				plan_success, actions = self.plan_agent_actions(agents, state,episode)
 
 				if not plan_success:
 					done = True
@@ -130,7 +131,18 @@ class Challenge:
 				step_num += 1
 				frame_start = self.env.num_frames
 				last_obs = convert_np_for_print(state["0"]["objects"])
+				print(f"######Step {step_num}######")
+				print(f"Agent actions: {actions}")
 				state, reward, done, info = self.env.step(actions)
+				
+				# Print action results for each agent
+				step_results = []
+				for agent_id in range(len(agents)):
+					if state[str(agent_id)]["rejected"]:
+						step_results.append(f"Agent {agent_id}: ❌ FAILED ({state[str(agent_id)]['rejected_reason']})")
+					else:
+						step_results.append(f"Agent {agent_id}: ✅ SUCCESS")
+				print(f"Results: {' | '.join(step_results)}")
 				
 				metadata.append({"step": step_num, "obs": last_obs, "actions": actions_to_print, "frame_start": frame_start, "frame_end": self.env.num_frames, "prompt": "", "prompt_value": info["prompt_value"]})
 				
@@ -163,15 +175,18 @@ class Challenge:
 				if done or step_num > self.max_steps:
 					break
 
+			loop_elapsed_time = time.time() - loop_start_time
 			if 'success' in info:
 				result = {
 					"success": info['success'],
 					"steps": step_num,
+					"time": loop_elapsed_time,
 				}
 			else:
 				result = {
 					"success": False,
 					"steps": step_num,
+					"time": loop_elapsed_time,
 				}
 
 			with open(os.path.join(self.output_dir, str(episode), 'result_episode.json'), 'w') as f:
@@ -200,15 +215,15 @@ class Challenge:
 		self.logger.info('time: {}'.format(time.time() - start))
 		return avg_succ, avg_succ_steps
 	
-	def plan_agent_actions(self, agents, state):
+	def plan_agent_actions(self, agents, state, episode):
 		actions = {}
 		for agent in agents:
 			agent_id = agent.agent_id
-			if agent.agent_type == 'combo_agent':
-				obs = self.filter_obs(state[str(agent_id)])
-			else:
-				obs = state[str(agent_id)]
-			action = agent.act(obs)
+			# if agent.agent_type == 'combo_agent':
+			# 	obs = self.filter_obs(state[str(agent_id)])
+			# else:
+			obs = state[str(agent_id)] # How to form state
+			action = agent.act(obs,episode)
 			# print(agent_id, action)
 			actions[str(agent_id)] = action
 		return True, actions
@@ -318,7 +333,7 @@ def main():
 			agents.append(GamePlanAgent(i, logger, args.output_dir, False, fix_clockwise=True))
 		elif agent == 'game_plan_agent_counter_clockwise': # agent with fixed counter-clockwise passing direction
 			agents.append(GamePlanAgent(i, logger, args.output_dir, False, fix_clockwise=False))
-		elif agent == 'genco_agent':
+		elif agent in ['combo_agent', 'genco_agent']:
 			agents.append(COMBOAgent(
 				task=args.task,
 				agent_id=i,
@@ -338,6 +353,8 @@ def main():
 				plan_beam=args.plan_beam,
 				cot=args.cot,
 				guidance_weight=args.guidance_weight,
+				run_id=args.run_id,
+				experiment_name=args.experiment_name,
 			))
 		else:
 			pass

@@ -448,6 +448,85 @@ class CookPlanAgent:
 		
 		return None
 
+	def get_available_action_prompts(self, obs):
+		"""
+		Generate and return a list of available action prompts for the current state.
+		Returns: List of prompt strings
+		"""
+		# Update state
+		self.id2name = {obj['id']: obj['name'] for obj in obs["objects"]}
+		self.name2id = {obj['name']: obj['id'] for obj in obs["objects"]}
+		self.id2pos = {obj['id']: obj['pos'] for obj in obs["objects"]}
+		self.id2upbound = {obj['id']: obj['upbound_pos'] for obj in obs["objects"]}
+		object_on_cutting_board = self.get_item_on_cutting_board(obs)
+		
+		num = [0, 0]
+		ln = [0, 0]
+		(num[0], num[1]), (ln[0], ln[1]), done = self.check_goal(obs)
+		
+		# Get objects in bins
+		obj_in_bins = [None for _ in range(len(self.reachable_bins))]
+		for obj in obs["objects"]:
+			if obj["id"] is None:
+				continue
+			for i in range(len(self.reachable_bins)):
+				if l2_dist(obj["pos"], self.reachable_bins[i]) < BIN_DIST_THRESHOLD:
+					obj_in_bins[i] = obj
+					break
+		
+		# Generate possible actions
+		possible_actions = [{"type": "wait", "prompt": "wait"}]
+		
+		if self.object_in_hand is None:
+			# Pick actions from bins
+			for i in range(len(self.reachable_bins)):
+				if obj_in_bins[i] is not None:
+					action = {"type": "pick", "obj_id": obj_in_bins[i]["id"], "obj_name": obj_in_bins[i]["name"],
+							  "pos": obj_in_bins[i]["pos"], "set_kinematic_state": True, "lift_up": True, "offset": 0.05}
+					action["prompt"] = self.action2prompt(action)
+					possible_actions.append(action)
+			
+			# Pick and cut actions from cutting board
+			if object_on_cutting_board is not None:
+				action = {"type": "pick", "obj_id": object_on_cutting_board["id"], "obj_name": object_on_cutting_board["name"],
+						  "pos": object_on_cutting_board["pos"], "set_kinematic_state": True, "lift_up": True, "offset": 0.05}
+				action["prompt"] = self.action2prompt(action)
+				possible_actions.append(action)
+				
+				if object_on_cutting_board["name"] in WHOLE_TO_SLICE.keys():
+					action = {"type": "cut", "obj_id": object_on_cutting_board["id"], "obj_name": object_on_cutting_board["name"],
+							  "pos": object_on_cutting_board["pos"]}
+					action["prompt"] = self.action2prompt(action)
+					possible_actions.append(action)
+		else:
+			# Place actions to bins
+			for i in range(len(self.reachable_bins)):
+				if obj_in_bins[i] is None:
+					pos = deepcopy(self.reachable_bins[i])
+					action = {"type": "place", "obj_id": self.object_in_hand["id"], "obj_name": self.object_in_hand["name"],
+							  "pos": np.array(pos), "place_type": PLACE_IN_THE_PRIVATE_REGION_TOP_LEFT + i, "set_kinematic_state": True}
+					action["prompt"] = self.action2prompt(action)
+					possible_actions.append(action)
+			
+			# Place action to cutting board
+			if object_on_cutting_board is None:
+				pos = deepcopy(self.id2upbound[self.name2id["wood_board"]])
+				action = {"type": "place", "obj_id": self.object_in_hand["id"], "obj_name": self.object_in_hand["name"],
+						  "pos": np.array(pos), "place_type": PLACE_ON_THE_CUTTING_BOARD, "set_kinematic_state": True}
+				action["prompt"] = self.action2prompt(action)
+				possible_actions.append(action)
+			
+			# Place action to plate
+			if num[int(self.agent_id)] < len(self.recipe[int(self.agent_id)]) and self.object_in_hand["name"] == self.recipe[int(self.agent_id)][num[int(self.agent_id)]]:
+				place_plate_pos = self.dest_plates[int(self.agent_id)]
+				action = {"type": "place", "obj_id": self.object_in_hand["id"], "obj_name": self.object_in_hand["name"],
+						  "pos": place_plate_pos, "place_type": PLACE_ON_THE_PLATE, "set_kinematic_state": True}
+				action["prompt"] = self.action2prompt(action)
+				possible_actions.append(action)
+		
+		# Return only prompt strings
+		return [action["prompt"] for action in possible_actions]
+
 	def check_goal(self, obs):
 		plate1_pos = self.dest_plates[0]
 		num1 = len(self.recipe[0])

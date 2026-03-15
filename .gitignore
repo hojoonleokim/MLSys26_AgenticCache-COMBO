@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.so
+
+# Model weights & large binaries
+modl-100.pt
+*.pkl
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+# Logs
+*.log
+chat_log/
+
+# Experiment results & cache
+tdw_maco/results/
+tdw_maco/tdw_asset_cache/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.*
+*.env
+
+# Conda / venv
+.conda/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db

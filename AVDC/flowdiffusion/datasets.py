@@ -574,14 +574,24 @@ class TDWMacoDataset(Dataset):
             cache_path = os.path.join(path, f"dataset_cache{suffix}.pk")
             if embed_cache is None:
                 conditions, sequences, text_goal, task_name = [], [], [], []
-                for run in os.listdir(path):
+                print(f"🔍 {task} 데이터 처리 중: {path}")
+                all_items = os.listdir(path)
+                run_dirs = [d for d in all_items if os.path.isdir(os.path.join(path, d)) and d.startswith('run_')]
+                print(f"  발견된 run 디렉토리: {run_dirs}")
+                
+                for run in run_dirs:
                     try:
+                        print(f"  📂 {run} 처리 중...")
                         cond, seq, goal, name = self._get_step(task, path, run)
                         conditions.extend(cond)
                         sequences.extend(seq)
                         text_goal.extend(goal)
                         task_name.extend(name)
+                        print(f"    ✅ {len(cond)}개 샘플 추가됨")
                     except Exception as e:
+                        print(f"    ❌ {run} 처리 실패: {e}")
+                        import traceback
+                        traceback.print_exc()
                         continue
                 with open(cache_path, "wb") as f:
                     pickle.dump((conditions, sequences, text_goal, task_name), f)
@@ -601,73 +611,90 @@ class TDWMacoDataset(Dataset):
         print("Done...")
     
     def _get_step(self, task, path, run):
-        step_path = os.path.join(path, run)
-        if not os.path.isdir(step_path):
-            raise Exception("step_path is not a dir: " + step_path)
+        run_path = os.path.join(path, run)
+        if not os.path.isdir(run_path):
+            raise Exception("run_path is not a dir: " + run_path)
         
-        with open(os.path.join(step_path, "metadata.json")) as f:
-            metadata = json.load(f)
-        imgs_name = sorted(filter(lambda x: x.startswith("img"), os.listdir(os.path.join(step_path, "top_down"))))
-        imgs_id = [int(re.search(r"\d+", img).group(0)) for img in imgs_name]
-        assert imgs_id == sorted(imgs_id), "imgs_id is not sorted"
-
-        if "cook" in task:
-            with open(os.path.join(step_path, "recipe.json")) as f:
-                recipe = json.load(f)
-
-        last_frame = 0
-        conditions, sequences, text_goal, task_name = [], [], [], []
-        for step_data in metadata:
-            frame_start = step_data["frame_start"]
-            frame_end = step_data["frame_end"]
-            first_frame = last_frame
-            while imgs_id[last_frame] < frame_end:
-                last_frame += 1
-            if last_frame - first_frame + 1 != 8: # 8 frames per step
+        # run 디렉토리 내의 에피소드 디렉토리들 찾기
+        episode_dirs = [d for d in os.listdir(run_path) if d.isdigit()]
+        if not episode_dirs:
+            raise Exception(f"No episode directories found in {run_path}")
+        
+        all_conditions, all_sequences, all_text_goal, all_task_name = [], [], [], []
+        
+        for episode_dir in episode_dirs:
+            step_path = os.path.join(run_path, episode_dir)
+            if not os.path.isdir(step_path):
                 continue
-            agents = step_data["actions"].keys()
-            top_down = [os.path.join(step_path, "top_down", image) for image in imgs_name[first_frame:last_frame+1]]
-            if self.single:
-                for agent in agents:
-                    prompt = f'{TDWMacoDataset.AGENT_NAME[agent]} {step_data["actions"][agent]["prompt"]}.'
-                    text_goal.append(prompt)
-                    task_name.append(os.path.join(task, run, str(step_data["step"])))
-                    sequences.append(top_down)
-                    conditions.append(top_down[0])
-                    if self.embed_cache is not None:
-                        assert self.embed_cache.get(prompt) is not None, "text_embed is None"
-            elif not self.inpainting: # composed
-                prompt = []
-                for agent in agents:
-                    prompt.append(f'{TDWMacoDataset.AGENT_NAME[agent]} {step_data["actions"][agent]["prompt"]}.')
-                text_goal.append(prompt)
-                task_name.append(os.path.join(task, run, str(step_data["step"])))
-                sequences.append(top_down)
-                conditions.append(top_down[0])
-                if self.embed_cache is not None:
-                    assert self.embed_cache.get(prompt) is not None, "text_embed is None"
-            else:
-                for agent in agents:
-                    task_name.append(os.path.join(task, run, str(step_data["step"]), agent))
-                    overlay = os.path.join(step_path, agent, "overlay_%05d.png" % frame_end)
-                    if not os.path.exists(overlay):
-                        recons = [np.array(Image.open(os.path.join(step_path, agent, "reconstructed_%05d.png" % id))) for id in imgs_id[first_frame:last_frame+1]]
-                        Image.fromarray(get_overlay_ego_topdown(recons)).save(overlay)
-                    conditions.append(overlay)
-                    sequences.append([top_down[-1]])
-                    
-                    # if "game" in task:
-                    #     prompt = get_game_prompt(int(agent))
-                    # elif "cook" in task:
-                    #     prompt = get_cook_prompt(int(agent), recipe)
-                    # else:
-                    prompt = ""
-                    
-                    text_goal.append(prompt)
-                    if self.embed_cache is not None:
-                        assert self.embed_cache.get(prompt) is not None, "text_embed is None"
+                
+            try:
+                with open(os.path.join(step_path, "metadata.json")) as f:
+                    metadata = json.load(f)
+                imgs_name = sorted(filter(lambda x: x.startswith("img"), os.listdir(os.path.join(step_path, "top_down"))))
+                imgs_id = [int(re.search(r"\d+", img).group(0)) for img in imgs_name]
+                assert imgs_id == sorted(imgs_id), "imgs_id is not sorted"
+
+                if "cook" in task:
+                    with open(os.path.join(step_path, "recipe.json")) as f:
+                        recipe = json.load(f)
+
+                last_frame = 0
+                conditions, sequences, text_goal, task_name = [], [], [], []
+                for step_data in metadata:
+                    frame_start = step_data["frame_start"]
+                    frame_end = step_data["frame_end"]
+                    first_frame = last_frame
+                    while last_frame < len(imgs_id) and imgs_id[last_frame] < frame_end:
+                        last_frame += 1
+                    if last_frame - first_frame + 1 != 8: # 8 frames per step
+                        continue
+                    agents = step_data["actions"].keys()
+                    top_down = [os.path.join(step_path, "top_down", image) for image in imgs_name[first_frame:last_frame+1]]
+                    if self.single:
+                        for agent in agents:
+                            prompt = f'{TDWMacoDataset.AGENT_NAME[agent]} {step_data["actions"][agent]["prompt"]}.'
+                            text_goal.append(prompt)
+                            task_name.append(os.path.join(task, run, episode_dir, str(step_data["step"])))
+                            sequences.append(top_down)
+                            conditions.append(top_down[0])
+                            if self.embed_cache is not None:
+                                assert self.embed_cache.get(prompt) is not None, "text_embed is None"
+                    elif not self.inpainting: # composed
+                        prompt = []
+                        for agent in agents:
+                            prompt.append(f'{TDWMacoDataset.AGENT_NAME[agent]} {step_data["actions"][agent]["prompt"]}.')
+                        text_goal.append(prompt)
+                        task_name.append(os.path.join(task, run, episode_dir, str(step_data["step"])))
+                        sequences.append(top_down)
+                        conditions.append(top_down[0])
+                        if self.embed_cache is not None:
+                            assert self.embed_cache.get(prompt) is not None, "text_embed is None"
+                    else:
+                        for agent in agents:
+                            task_name.append(os.path.join(task, run, episode_dir, str(step_data["step"]), agent))
+                            overlay = os.path.join(step_path, agent, "overlay_%05d.png" % frame_end)
+                            if not os.path.exists(overlay):
+                                recons = [np.array(Image.open(os.path.join(step_path, agent, "reconstructed_%05d.png" % id))) for id in imgs_id[first_frame:last_frame+1]]
+                                Image.fromarray(get_overlay_ego_topdown(recons)).save(overlay)
+                            conditions.append(overlay)
+                            sequences.append([top_down[-1]])
+                            
+                            prompt = ""
+                            
+                            text_goal.append(prompt)
+                            if self.embed_cache is not None:
+                                assert self.embed_cache.get(prompt) is not None, "text_embed is None"
+                
+                all_conditions.extend(conditions)
+                all_sequences.extend(sequences)
+                all_text_goal.extend(text_goal)
+                all_task_name.extend(task_name)
+                
+            except Exception as e:
+                print(f"      ❌ 에피소드 {episode_dir} 처리 실패: {e}")
+                continue
             
-        return conditions, sequences, text_goal, task_name
+        return all_conditions, all_sequences, all_text_goal, all_task_name
     
     def __len__(self):
         return len(self.task_name)
@@ -679,18 +706,16 @@ class TDWMacoDataset(Dataset):
             if not isinstance(text, list):
                 text_embed = self.embed_cache.get(text)
                 if text_embed is None:
-                    print(self.text_goal[idx])
-                    raise Exception("text_embed is None")
-            else:
-                text_embed = [self.embed_cache.get(t) for t in text]
-                if any([t is None for t in text_embed]):
-                    print(text)
+                    print(f"캐시 미스: '{text}'")
                     raise Exception("text_embed is None")
             
             images = []
             for s in seq:
-                images.append(self.transform([Image.open(s)]).squeeze(1))
-            images = torch.stack(images, dim=0)
+                try:
+                    images.append(self.transform([Image.open(s)]).squeeze(1))
+                except Exception as e:
+                    print(f"  ❌ {s} 처리 실패: {e}")
+                    continue
             
             if self.inpainting:
                 x = images[0]

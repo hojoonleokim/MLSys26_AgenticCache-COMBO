@@ -22,10 +22,31 @@ class TDWMacoTrainer:
         self.target_size = (336, 336) if args.inpainting else (128, 128)
         self.sample_per_seq = 8
         self.valid_n = 8
+        # 데이터셋 경로 설정
+        base_path = "../../tdw_maco"  # AVDC/flowdiffusion에서 tdw_maco로의 상대 경로
+        
         self.train_path = {
+            "cook_basic": f"{base_path}/train_data/cook_basic/train/cook",
+            "game_clockwise": f"{base_path}/train_data/game_clockwise/train/game"
         }
         self.test_path = {
+            "cook_basic": f"{base_path}/test_data/cook_basic/train/cook",
+            "game_clockwise": f"{base_path}/test_data/game_clockwise/train/game"
         }
+        
+        # 존재하는 데이터 경로만 필터링
+        import os
+        self.train_path = {k: v for k, v in self.train_path.items() if os.path.exists(v) and os.listdir(v)}
+        self.test_path = {k: v for k, v in self.test_path.items() if os.path.exists(v) and os.listdir(v)}
+        
+        if not self.train_path:
+            print("⚠️  경고: 훈련 데이터가 없습니다. 먼저 데이터를 생성해주세요:")
+            print("   cd ../../tdw_maco && bash datagen.sh")
+        if not self.test_path:
+            print("⚠️  경고: 테스트 데이터가 없습니다.")
+            
+        print(f"📁 사용 가능한 훈련 데이터: {list(self.train_path.keys())}")
+        print(f"📁 사용 가능한 테스트 데이터: {list(self.test_path.keys())}")
         
         self.result_path = "../results/tdw_maco"
         if args.inpainting:
@@ -46,6 +67,10 @@ class TDWMacoTrainer:
         
         self.train_set = self.valid_set = self.test_set = [None]
         if self.mode != 'inference' and self.mode != 'get_model':
+            print(f"🔍 테스트 데이터셋 생성 중...")
+            print(f"  paths: {self.test_path}")
+            print(f"  embed_cache: {'None (전처리 모드)' if self.mode == 'preprocess' else 'Cache 객체'}")
+            
             self.test_set = TDWMacoDataset(
                 sample_per_seq=self.sample_per_seq,
                 paths=self.test_path,
@@ -55,6 +80,7 @@ class TDWMacoTrainer:
                 inpainting=args.inpainting,
                 single=args.single,
             )
+            print(f"✅ 테스트 데이터셋 크기: {len(self.test_set)}")
             if self.mode != 'test':
                 self.train_set = TDWMacoDataset(
                     sample_per_seq=self.sample_per_seq,
@@ -128,7 +154,7 @@ class TDWMacoTrainer:
                 save_and_sample_every = 2 if self.args.debug else 1000,
                 ema_update_every = 10,
                 ema_decay = 0.999,
-                train_batch_size = 1 if self.args.debug else 96,
+                train_batch_size = 1 if self.args.debug else 48,
                 valid_batch_size = 32,
                 gradient_accumulate_every = 1,
                 num_samples=self.valid_n, 
@@ -182,6 +208,16 @@ class TDWMacoTrainer:
     
     def preprocess(self, dataset: TDWMacoDataset):
         self.text_encoder = self.text_encoder.cuda()
+        
+        # inpainting 모드에서 빈 문자열 처리를 위해 미리 추가
+        if hasattr(dataset, 'inpainting') and dataset.inpainting:
+            if self.cache.get("") is None:
+                print("🔍 inpainting 모드: 빈 문자열 임베딩 생성 중...")
+                text_ids = self.tokenizer([""], return_tensors='pt', padding=True, truncation=True, max_length=128).to(self.text_encoder.device)
+                result = self.text_encoder(**text_ids).last_hidden_state.cpu().squeeze(0)
+                self.cache.set("", result)
+                print("✅ 빈 문자열 임베딩 생성 완료")
+        
         for i in tqdm(range(len(dataset)), desc='Preprocessing'):
             text, task_name = dataset[i]
             if len(text) > 0 and isinstance(text[0], tuple):

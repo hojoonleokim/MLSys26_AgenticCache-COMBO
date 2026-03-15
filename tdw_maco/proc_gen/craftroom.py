@@ -177,7 +177,7 @@ class CraftRoom:
 
         n_piece = len(piece_lst) # number of pieces that can get out of the puzzle
 
-        if is_test or force_initial or rng.randint(1, 4) == 1:
+        if is_test or rng.randint(1, 4) == 1:
             if number_of_agents == 2:
                 num_out = min(4, n_piece)
             elif number_of_agents == 3:

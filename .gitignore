@@ -1,0 +1,6 @@
+__pycache__/
+train_data
+test_data
+tdw_asset_cache 
+*.log
+*.pkl

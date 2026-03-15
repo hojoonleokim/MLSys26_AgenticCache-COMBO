@@ -1,0 +1,60 @@
+Task: COOK
+Analysis: Action Bigrams (2-grams)
+================================================================================
+
+Total bigrams: 932
+Unique bigrams: 24
+Unique action types: 7
+
+================================================================================
+pick_from_private_region
+--------------------------------------------------------------------------------
+1. [pick_from_private_region -> place_in_private_region]: 139 (45.0%)
+2. [pick_from_private_region -> place_on_cutting_board]: 92 (29.8%)
+3. [pick_from_private_region -> place_on_plate]: 78 (25.2%)
+
+================================================================================
+place_in_private_region
+--------------------------------------------------------------------------------
+1. [place_in_private_region -> pick_from_private_region]: 77 (51.0%)
+2. [place_in_private_region -> wait]: 45 (29.8%)
+3. [place_in_private_region -> pick_from_cutting_board]: 26 (17.2%)
+4. [place_in_private_region -> cut]: 3 (2.0%)
+
+================================================================================
+place_on_plate
+--------------------------------------------------------------------------------
+1. [place_on_plate -> pick_from_private_region]: 109 (79.6%)
+2. [place_on_plate -> wait]: 17 (12.4%)
+3. [place_on_plate -> pick_from_cutting_board]: 10 (7.3%)
+4. [place_on_plate -> cut]: 1 (0.7%)
+
+================================================================================
+wait
+--------------------------------------------------------------------------------
+1. [wait -> pick_from_private_region]: 74 (63.8%)
+2. [wait -> pick_from_cutting_board]: 40 (34.5%)
+3. [wait -> cut]: 2 (1.7%)
+
+================================================================================
+place_on_cutting_board
+--------------------------------------------------------------------------------
+1. [place_on_cutting_board -> wait]: 59 (59.0%)
+2. [place_on_cutting_board -> cut]: 16 (16.0%)
+3. [place_on_cutting_board -> pick_from_cutting_board]: 15 (15.0%)
+4. [place_on_cutting_board -> pick_from_private_region]: 10 (10.0%)
+
+================================================================================
+pick_from_cutting_board
+--------------------------------------------------------------------------------
+1. [pick_from_cutting_board -> place_on_plate]: 76 (78.4%)
+2. [pick_from_cutting_board -> place_in_private_region]: 13 (13.4%)
+3. [pick_from_cutting_board -> place_on_cutting_board]: 8 (8.2%)
+
+================================================================================
+cut
+--------------------------------------------------------------------------------
+1. [cut -> wait]: 13 (59.1%)
+2. [cut -> pick_from_cutting_board]: 8 (36.4%)
+3. [cut -> pick_from_private_region]: 1 (4.5%)
+

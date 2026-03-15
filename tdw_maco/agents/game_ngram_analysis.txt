@@ -1,0 +1,47 @@
+Task: GAME
+Analysis: Action Bigrams (2-grams)
+================================================================================
+
+Total bigrams: 1,063
+Unique bigrams: 15
+Unique action types: 6
+
+================================================================================
+pick_from_shared_region
+--------------------------------------------------------------------------------
+1. [pick_from_shared_region -> place_on_shared_region]: 197 (59.0%)
+2. [pick_from_shared_region -> place_in_puzzle]: 69 (20.7%)
+3. [pick_from_shared_region -> place_in_private_region]: 68 (20.4%)
+
+================================================================================
+place_on_shared_region
+--------------------------------------------------------------------------------
+1. [place_on_shared_region -> pick_from_shared_region]: 173 (56.5%)
+2. [place_on_shared_region -> wait]: 84 (27.5%)
+3. [place_on_shared_region -> pick_from_private_region]: 49 (16.0%)
+
+================================================================================
+pick_from_private_region
+--------------------------------------------------------------------------------
+1. [pick_from_private_region -> place_on_shared_region]: 110 (69.2%)
+2. [pick_from_private_region -> place_in_private_region]: 40 (25.2%)
+3. [pick_from_private_region -> place_in_puzzle]: 9 (5.7%)
+
+================================================================================
+place_in_private_region
+--------------------------------------------------------------------------------
+1. [place_in_private_region -> pick_from_private_region]: 75 (69.4%)
+2. [place_in_private_region -> pick_from_shared_region]: 33 (30.6%)
+
+================================================================================
+wait
+--------------------------------------------------------------------------------
+1. [wait -> pick_from_shared_region]: 87 (100.0%)
+
+================================================================================
+place_in_puzzle
+--------------------------------------------------------------------------------
+1. [place_in_puzzle -> wait]: 30 (43.5%)
+2. [place_in_puzzle -> pick_from_private_region]: 24 (34.8%)
+3. [place_in_puzzle -> pick_from_shared_region]: 15 (21.7%)
+
